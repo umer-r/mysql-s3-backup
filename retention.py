@@ -1,13 +1,9 @@
 """
-    Keep only N newest local backups and optionally cleanup S3 using s3_client helpers.
+    Keep only N newest local backups.
 """
 
 from pathlib import Path
-from typing import List
-
-from config import Config
 from utils import get_logger
-from s3_client import list_objects, delete_objects
 
 logger = get_logger(__name__)
 
@@ -23,13 +19,3 @@ def cleanup_local(backups_dir: Path, keep: int):
             logger.info("Deleted local backup: %s", f)
         except Exception as e:
             logger.exception("Failed to delete local backup %s: %s", f, e)
-
-
-def cleanup_s3(cfg: Config, prefix: str, keep: int):
-    # list objects under prefix and sort by LastModified desc
-    objs = list_objects(cfg, prefix)
-    objs.sort(key=lambda o: o["LastModified"], reverse=True)
-    to_delete = objs[keep:]
-    keys = [o["Key"] for o in to_delete]
-    if keys:
-        delete_objects(cfg, keys)

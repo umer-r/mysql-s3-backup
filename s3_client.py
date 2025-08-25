@@ -4,8 +4,7 @@
 
 import boto3
 from botocore.client import Config as BotoConfig
-from typing import Optional, List
-
+from typing import List
 from config import Config
 from utils import get_logger
 
@@ -54,15 +53,3 @@ def list_objects(cfg: Config, prefix: str) -> List[dict]:
         for o in page.get("Contents", []):
             objs.append(o)
     return objs
-
-
-def delete_objects(cfg: Config, keys: List[str]):
-    if not keys:
-        return
-    client = make_s3_client(cfg)
-    # batch delete (max 1000 per call)
-    for i in range(0, len(keys), 1000):
-        chunk = keys[i : i + 1000]
-        delete_payload = {"Objects": [{"Key": k} for k in chunk]}
-        resp = client.delete_objects(Bucket=cfg.s3_bucket, Delete=delete_payload)
-        logger.info("Deleted objects: %s", chunk)

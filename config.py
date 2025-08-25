@@ -61,6 +61,8 @@ class Config:
     s3_endpoint_url: Optional[str]
     s3_access_key: Optional[str]
     s3_secret_key: Optional[str]
+    
+    mysqldump_skip_ssl: bool
 
 
 def load_config() -> Config:
@@ -78,6 +80,8 @@ def load_config() -> Config:
     s3_access_key = os.getenv("S3_ACCESS_KEY")
     s3_secret_key = os.getenv("S3_SECRET_KEY")
     s3_prefix = os.getenv("S3_BUCKET_PREFIX")
+    
+    mysqldump_skip_ssl = _env_bool("MYSQLDUMP_SKIP_SSL", False)
 
     return Config(
         database_names=database_names,
@@ -93,4 +97,5 @@ def load_config() -> Config:
         s3_access_key=s3_access_key,
         s3_secret_key=s3_secret_key,
         s3_prefix=s3_prefix,
+        mysqldump_skip_ssl=mysqldump_skip_ssl
     )

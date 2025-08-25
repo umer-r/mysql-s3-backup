@@ -1,27 +1,25 @@
-# Dockerfile — python slim image with mysql client installed
-FROM python:3.11-slim
+FROM python:3.11-alpine
 
-# install packages needed for mysqldump and for building dependencies
-RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-       default-mysql-client \
-       ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+# Install only the necessary MySQL client tools
+RUN apk update && \
+    apk add --no-cache \
+    mysql-client \
+    && rm -rf /var/cache/apk/*
 
 WORKDIR /app
 
-# copy requirements and install
+# Copy requirements first to leverage Docker cache
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# copy app
+# Copy application code
 COPY . /app
 
 # Create backups directory
 RUN mkdir -p /app/backups
 
-# use a non-root user if desired (optional)
-# RUN useradd -m backupuser && chown -R backupuser /app
-# USER backupuser
+# Use a non-root user for security
+RUN adduser -D backupuser && chown -R backupuser /app
+USER backupuser
 
 ENTRYPOINT ["python", "main.py"]

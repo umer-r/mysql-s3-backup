@@ -4,7 +4,7 @@
 
 - `DATABASE_NAMES` — comma-separated DB names to dump. If empty or unset, the script will dump all databases into a single logical backup file.
 - `DATABASE_USER` — MySQL user for dumping (default: `root`).
-- `DATABASE_USER_PASS` — password for the database user.
+- `DATABASE_USER_PASS` — password for the MYSQL Database user.
 - `DATABASE_HOST` — MySQL host (default: `localhost`).
 - `DATABASE_PORT` — MySQL port (default: `3306`).
 - `BACKUPS_TO_KEEP` — integer number of backups to keep (default: `7`).
@@ -14,6 +14,16 @@
 - `S3_REGION` — optional region.
 - `S3_ENDPOINT_URL` — optional endpoint (for R2 or other S3-compatible providers).
 - `S3_ACCESS_KEY` / `S3_SECRET_KEY` — credentials for S3-compatible storage.
+- `MYSQLDUMP_SKIP_SSL` — **Insecure** Disable TLS mode.
+
+## Notes
+> **1:** If getting an Issue with user access denied try removing the qoutes from the user pass
+>
+> **E.g:** 
+> 
+>   `DATABASE_USER_PASS="secretpass"` <-- Error
+> 
+>   `DATABASE_USER_PASS=secretpass` <-- Correct
 
 ## Build and run (Docker)
 

@@ -7,7 +7,6 @@ import gzip
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from config import Config
 from utils import get_logger
@@ -29,6 +28,9 @@ def _build_mysqldump_command(cfg: Config) -> list:
         "--events",
         "--triggers",
     ]
+    
+    if cfg.mysqldump_skip_ssl:
+        base.append("--skip-ssl")
 
     if not cfg.database_names:
         base.append("--all-databases")
@@ -56,6 +58,8 @@ def create_dump(cfg: Config, out_dir: Path) -> Path:
     out_path = out_dir / filename
 
     cmd = _build_mysqldump_command(cfg)
+    # Remove all (") qoutations from the cmd
+    cmd = [arg.replace('"', '').replace("'", '') for arg in cmd]
     logger.info("Running mysqldump: %s", " ".join(cmd))
 
     env = None

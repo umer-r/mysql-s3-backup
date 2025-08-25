@@ -4,10 +4,9 @@
 
 from pathlib import Path
 import sys
-
 from config import load_config
 from mysql_dump import create_dump
-from retention import cleanup_local, cleanup_s3
+from retention import cleanup_local
 from s3_client import upload_file
 from utils import get_logger
 
@@ -29,7 +28,11 @@ def main():
         if not cfg.s3_bucket:
             logger.error("S3 enabled but S3_BUCKET is not set")
         else:
-            key = f"{cfg.s3_prefix.rstrip('/')}/{backup_path.name}"
+            if cfg.s3_prefix and cfg.s3_prefix != "":
+                key = f"{cfg.s3_prefix.rstrip('/')}/{backup_path.name}"
+            else:
+                key = backup_path.name
+            
             try:
                 upload_file(cfg, str(backup_path), key)
             except Exception:
@@ -40,15 +43,6 @@ def main():
         cleanup_local(backups_dir, cfg.backups_to_keep)
     except Exception:
         logger.exception("Local retention cleanup failed")
-
-    ##
-    # cleanup s3
-    # if cfg.s3_enabled and cfg.s3_bucket:
-    #     try:
-    #         cleanup_s3(cfg, cfg.s3_prefix, cfg.backups_to_keep)
-    #     except Exception:
-    #         logger.exception("S3 retention cleanup failed")
-    ##
 
 
 if __name__ == "__main__":
