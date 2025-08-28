@@ -1,3 +1,5 @@
 __pycache__
 backups
 venv
+config_files
+conf_files

@@ -10,7 +10,7 @@ LABEL org.opencontainers.image.vendor="Umer Mehmood" \
       org.opencontainers.image.title="Mysql S3 Backup" \
       org.opencontainers.image.description="Logical Backups for Mysql/MariaDB and optionally push to S3 compatible storage." \
       org.opencontainers.image.version="${VERSION}" \
-      org.opencontainers.image.documentation="https://github.com/umer-r/mysql-s3-backup/blob/master/README.md" \
+      org.opencontainers.image.documentation="https://github.com/umer-r/mysql-s3-backup/blob/main/README.md" \
       org.opencontainers.image.revision="${VCS_REF}" \
       org.opencontainers.image.created="${BUILD_DATE}"
 
