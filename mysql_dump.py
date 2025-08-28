@@ -30,7 +30,18 @@ def _build_mysqldump_command(cfg: Config) -> list:
     ]
     
     if cfg.mysqldump_skip_ssl:
-        base.append("--skip-ssl")
+        if cfg.database_client == "mariadb":
+            base.append("--skip-ssl")
+        else:
+            base.append("--ssl-mode=DISABLED")
+        
+    if cfg.mysqldump_ssl_ca:
+        if cfg.database_client == "mariadb":
+            base.append(f"--ssl-ca={cfg.mysqldump_ssl_ca}")
+            base.append("--ssl-verify-server-cert=0")
+        else:
+            base.append(f"--ssl-ca={cfg.mysqldump_ssl_ca}")
+            base.append("--ssl-mode=REQUIRED")
 
     if not cfg.database_names:
         base.append("--all-databases")

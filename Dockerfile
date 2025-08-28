@@ -1,25 +1,21 @@
 FROM python:3.11-alpine
 
-# Install only the necessary MySQL client tools
-RUN apk update && \
-    apk add --no-cache \
-    mysql-client \
-    && rm -rf /var/cache/apk/*
+RUN adduser -D -h /home/backupuser backupuser \
+ && mkdir -p /app/backups \
+ && chown -R backupuser:backupuser /app
 
 WORKDIR /app
 
-# Copy requirements first to leverage Docker cache
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+# Alpine's "mysql-client" is MariaDB client
+RUN apk add --no-cache \
+    mysql-client \
+    && rm -rf /var/cache/apk/*
 
-# Copy application code
-COPY . /app
+COPY --chown=backupuser:backupuser requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Create backups directory
-RUN mkdir -p /app/backups
+COPY --chown=backupuser:backupuser . /app
 
-# Use a non-root user for security
-RUN adduser -D backupuser && chown -R backupuser /app
 USER backupuser
 
 ENTRYPOINT ["python", "main.py"]

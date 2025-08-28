@@ -9,6 +9,10 @@ __pycache__/
 backups
 backup
 
+# conf dir
+conf_files
+config_files
+
 # C extensions
 *.so
 

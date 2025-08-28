@@ -53,6 +53,7 @@ class Config:
     database_user_pass: str
     database_host: str
     database_port: int
+    database_client: Optional[str]
 
     s3_enabled: bool
     s3_bucket: Optional[str]
@@ -62,7 +63,8 @@ class Config:
     s3_access_key: Optional[str]
     s3_secret_key: Optional[str]
     
-    mysqldump_skip_ssl: bool
+    mysqldump_skip_ssl: Optional[bool]
+    mysqldump_ssl_ca: Optional[str]
 
 
 def load_config() -> Config:
@@ -72,6 +74,7 @@ def load_config() -> Config:
     database_user_pass = os.getenv("DATABASE_USER_PASS", "")
     database_host = os.getenv("DATABASE_HOST", "localhost")
     database_port = _env_int("DATABASE_PORT", 3306)
+    database_client = os.getenv("DATABASE_CLIENT", "mariadb")
 
     s3_enabled = _env_bool("S3_ENABLED", False)
     s3_bucket = os.getenv("S3_BUCKET")
@@ -82,6 +85,7 @@ def load_config() -> Config:
     s3_prefix = os.getenv("S3_BUCKET_PREFIX")
     
     mysqldump_skip_ssl = _env_bool("MYSQLDUMP_SKIP_SSL", False)
+    mysqldump_ssl_ca = os.getenv("MYSQLDUMP_SSL_CA")
 
     return Config(
         database_names=database_names,
@@ -90,6 +94,7 @@ def load_config() -> Config:
         database_user_pass=database_user_pass,
         database_host=database_host,
         database_port=database_port,
+        database_client=database_client,
         s3_enabled=s3_enabled,
         s3_bucket=s3_bucket,
         s3_region=s3_region,
@@ -97,5 +102,6 @@ def load_config() -> Config:
         s3_access_key=s3_access_key,
         s3_secret_key=s3_secret_key,
         s3_prefix=s3_prefix,
-        mysqldump_skip_ssl=mysqldump_skip_ssl
+        mysqldump_skip_ssl=mysqldump_skip_ssl,
+        mysqldump_ssl_ca=mysqldump_ssl_ca        
     )
