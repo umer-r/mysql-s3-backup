@@ -1,72 +1,101 @@
-# MySQL/MariaDB Logical Backup → S3 (R2/AWS)
+# MySQL / MariaDB — Logical Backups → S3 (R2 / AWS)
+
+A lightweight utility to create logical backups (using mysqldump / mariadb-dump) and optionally upload them to S3-compatible object storage (AWS S3, Cloudflare R2, etc.). Designed to run in Docker, cron jobs, or Kubernetes CronJobs.
+
+## Features
+
+- Create logical backups of one or multiple databases.
+- Optional upload to S3-compatible object storage (supports custom endpoints for R2 and similar).
+- Retention policy: keep a configurable number of backups (locally).
 
 ## Environment variables
 
-- `DATABASE_CLIENT` - Client to use for creating logical backup (Default: mariadb).
-- `DATABASE_NAMES` — comma-separated DB names to dump. If empty or unset, the script will dump all databases into a single logical backup file.
-- `DATABASE_USER` — MySQL user for dumping (default: `root`).
-- `DATABASE_USER_PASS` — password for the MYSQL Database user.
-- `DATABASE_HOST` — MySQL host (default: `localhost`).
-- `DATABASE_PORT` — MySQL port (default: `3306`).
-- `BACKUPS_TO_KEEP` — integer number of backups to keep (default: `7`).
-- `S3_ENABLED` — `true` or `false` (default: `false`).
-- `S3_BUCKET` — bucket name to upload to (required if `S3_ENABLED=true`).
-- `S3_BUCKET_PREFIX` — optional prefix used inside the bucket (default: `backups/`).
-- `S3_REGION` — optional region.
-- `S3_ENDPOINT_URL` — optional endpoint (for R2 or other S3-compatible providers).
-- `S3_ACCESS_KEY` / `S3_SECRET_KEY` — credentials for S3-compatible storage.
-- `MYSQLDUMP_SSL_CA` — Ca file path to enable SSL. (Use either MYSQLDUMP_SSL_CA or MYSQLDUMP_SKIP_SSL).
-- `MYSQLDUMP_SKIP_SSL` — **Insecure** Disable TLS mode.
+Use environment variables to configure backup behavior. Reasonable defaults are provided where applicable.
 
-## Notes
+| Variable | Description | Default / Required |
+|---|---:|---|
+| `DATABASE_CLIENT` | Tool used for dump (`mariadb` or `mysql`) | `mariadb` |
+| `DATABASE_NAMES` | Comma-separated list of databases to dump. If empty, all databases are dumped into a single file. | (empty) |
+| `DATABASE_USER` | MySQL user used for dumping | `root` |
+| `DATABASE_USER_PASS` | Password for the DB user | **required** (or set via secret) |
+| `DATABASE_HOST` | MySQL host | `localhost` |
+| `DATABASE_PORT` | MySQL port | `3306` |
+| `BACKUPS_TO_KEEP` | Number of backups to retain (local) | `7` |
+| `S3_ENABLED` | Enable upload to S3-compatible storage (`True` / `False`) | `False` |
+| `S3_BUCKET` | S3 bucket name (required if `S3_ENABLED=true`) | — |
+| `S3_BUCKET_PREFIX` | Optional prefix/path inside the bucket | - |
+| `S3_REGION` | S3 region (optional) | — |
+| `S3_ENDPOINT_URL` | Custom S3 endpoint (for R2 / AWS / Other) | — |
+| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | Credentials for S3-compatible storage | — |
+| `MYSQLDUMP_SSL_CA` | Path to CA file to enable TLS for dump connection | — |
+| `MYSQLDUMP_SKIP_SSL` | Disable TLS for dump connection (**insecure**) | `False` |
 
-  **1:** If getting an Issue with user access denied try removing the qoutes from the user pass
+## Notes & troubleshooting
 
-  **E.g:**
-
-  `DATABASE_USER_PASS="secretpass"` <-- Error
-
-  `DATABASE_USER_PASS=secretpass` <-- Correct
-
-## Build and run (Docker)
+- Shell quoting: when passing `DATABASE_USER_PASS` into a container or a Kubernetes secret, avoid adding extra quotes that become part of the value. For example:
 
 ```bash
-# build
-docker build -t mysql-backup:latest .
+# wrong — value will include the quotes
+DATABASE_USER_PASS="secretpass"
 
-# run (example)
-docker run --rm \
-  -e DATABASE_USER=root \
-  -e DATABASE_USER_PASS=secret \
-  -e DATABASE_HOST=db-host.example.com \
-  -e BACKUPS_TO_KEEP=14 \
-  -e S3_ENABLED=true \
-  -e S3_BUCKET=my-backups-bucket \
-  -e S3_ACCESS_KEY=AKIA... \
-  -e S3_SECRET_KEY=... \
-  mysql-backup:latest
+# correct
+DATABASE_USER_PASS=secretpass
 ```
 
-### User privileges
+- If you encounter authentication or access-denied errors, verify that the user, host, and privileges are configured correctly (see **User privileges** below).
 
-It is advised to not use root as the user in the env, instead a user with the following privileges should be created
+## Build (Docker)
+
+```bash
+# Build image (from project root)
+docker build -t mysql-s3-backup:latest .
+```
+
+## Run (example)
+
+```bash
+docker run --rm   -e DATABASE_USER=root   -e DATABASE_USER_PASS=secret   -e DATABASE_HOST=db-host.example.com   -e BACKUPS_TO_KEEP=14   -e S3_ENABLED=true   -e S3_BUCKET=my-backups-bucket   -e S3_ACCESS_KEY=AKIA...   -e S3_SECRET_KEY=...   mysql-s3-backup:latest
+```
+
+## Recommended database user privileges
+
+For safety, do **not** use `root` in production. Create a dedicated backup user with the minimal required privileges:
 
 ```sql
+CREATE USER 'backupuser'@'%' IDENTIFIED BY 'strong_password';
 GRANT SELECT, SHOW VIEW, EVENT, TRIGGER, LOCK TABLES, RELOAD, PROCESS ON *.* TO 'backupuser'@'%';
 FLUSH PRIVILEGES;
 ```
 
-run the command to test privileges:
+### Test dumping privileges
+
+Run a manual dump to verify the backup user has the required access:
 
 ```bash
-mysqldump -ubackup_user -p -h mysql_host -P3306 --single-transaction --skip-lock-tables --quick --routines --events --triggers --databases db1 db2 > dump.sql
+mysqldump -ubackupuser -p -h mysql_host -P3306   --single-transaction --skip-lock-tables --quick   --routines --events --triggers --databases db1 db2 > dump.sql
 ```
 
-## Use a cron
+## Scheduling the backup
 
-```bash
-0 2 * * * docker run --rm \
-  -e DATABASE_USER=... \
-  ... \
-  mysql-backup:latest
+### Cron (host)
+
+Example cron entry (daily at 02:00):
+
+```cron
+0 2 * * * docker run --rm -e DATABASE_USER=... -e DATABASE_USER_PASS=... -e DATABASE_HOST=... -e S3_ENABLED=true -e S3_BUCKET=... carb0n2019/mysql-s3-backup:0.1.1
 ```
+
+### Kubernetes Cronjob
+
+Read on my blog to deploy as [Kubernetes Cronjob](https://umerops.com/blog/scheduling-mysql-backups-using-kubernetes-cronjob-and-python).
+
+## Security considerations
+
+- Store credentials in secrets (Kubernetes secrets, Docker secrets, or environment management tools), avoid committing secrets to version control.
+- `MYSQLDUMP_SKIP_SSL` disables TLS and is considered insecure. Only use it in isolated, trusted networks.
+
+## Troubleshooting
+
+- `access denied` errors: confirm the user/host combination and privileges. Check that the `DATABASE_HOST` is reachable from the container or pod.
+- `connection refused`: verify `DATABASE_HOST` and `DATABASE_PORT`, and ensure the database allows connections from the source IP.
+- S3 upload fails: confirm `S3_ENABLED=true`, correct bucket name, and valid `S3_ACCESS_KEY`/`S3_SECRET_KEY`. For custom endpoints, ensure `S3_ENDPOINT_URL` includes the correct scheme (`https://`).
